@@ -1,103 +1,51 @@
-<?php
-    include 'controllerScorePerformance.php';
-    $dataLoad = new controllerScorePerformance();
-    $viewDataContentJourney = $dataLoad->controllerDataJourney();
-    $viewDataContentSquads = $dataLoad->controllerDataSquads();
+?php
 
-    if(isset($_POST['dataProcessReportTeam']) && ($_POST['dataProcessReportTeam'] == 'true')){
+declare(strict_types=1);
 
-        // Pesquisa dados para montar o gráfico dos resultados
-        require_once "controllerRegras.php";
-        $dataRules = new controllerRegras();
-        $viewDataRange = $dataRules->DadosRegras();
-        
-        // Pesquisar dados conforme filtros de pesquisa
-        $viewDataContent = $dataLoad->controllerDataScore($_POST);
-        if((is_array($viewDataContent))&&(is_array($viewDataRange))){
+include_once 'controllerScorePerformance.php';
+include_once 'controllerRegras.php';
 
-            // Montar informações da segunda linha do gráfico: resultado do time
-            foreach ($viewDataContent as $key) {
-                $jornada = $key['jornada'];
-                $dscTime = $key['time'];
+$controller  = new controllerScorePerformance();
+$journeys    = $controller->getJourneys();
+$squads      = $controller->getSquads();
 
-                // Montar informações da primeira linha do gráfico: resultado esperado
-                foreach ($viewDataRange as $values) {
-                    if(strtolower($key['metrica']) === strtolower($values['metricas'])){
-                        // Label da primeira linha: Ideal
-                        $metaIdeal[] = $values['metricas'];
-                        $notaIdeal[] = $values['pontuacao'];
+$reportData  = [];
+$rulesData   = [];
+$metaIdeal   = [];
+$notaIdeal   = [];
+$metaTime    = [];
+$notaTime    = [];
+$jornada     = '';
+$dscTime     = '';
+$notafinal   = 0;
+$viewError   = '';
 
-                        // Dados da segunda linha: Time
-                        $metaTime[] = $key['metrica'];
-                        $notaTime[] = $key['nota'];
-                    }
+if (isset($_POST['dataProcessReportTeam']) && $_POST['dataProcessReportTeam'] === 'true') {
+
+    $rulesController = new controllerRegras();
+    $rulesData       = $rulesController->dadosRegras();
+    $result          = $controller->controllerDataScore($_POST);
+
+    if (is_array($result) && is_array($rulesData)) {
+        $reportData = $result;
+
+        foreach ($reportData as $row) {
+            $jornada  = htmlspecialchars((string) $row['jornada'], ENT_QUOTES | ENT_HTML5);
+            $dscTime  = htmlspecialchars((string) $row['time'],    ENT_QUOTES | ENT_HTML5);
+
+            foreach ($rulesData as $rule) {
+                if (strtolower($row['metrica']) === strtolower($rule['metricas'])) {
+                    $metaIdeal[] = htmlspecialchars((string) $rule['metricas'], ENT_QUOTES | ENT_HTML5);
+                    $notaIdeal[] = (float) $rule['pontuacao'];
+                    $metaTime[]  = htmlspecialchars((string) $row['metrica'], ENT_QUOTES | ENT_HTML5);
+                    $notaTime[]  = (float) $row['nota'];
                 }
             }
-                       
-            // Montar informações detalhads conforme pesquisa.
-            $viewData = "
-            <h3>Comparativo entre métrica esperada e métrica do time</h3>
-            <div class='container'>
-                <div class='container chart-container' style='border-style: none;'>
-                    <canvas id='myChart'></canvas>
-                </div><br>
-                <div style='border-style: none;'>
-                    <p style='font-size: 25px; text-align: left; color: DarkViolet;'><strong>Dados detalhados do ".$dscTime."</strong></p>
-                    <table class='table table-striped' style='font-size: 12px;'>
-                    <thead>
-                        <tr><th >Time</th>
-                            <th >Categoria</th>
-                            <th >Métrica</th>
-                            <th >Sprint</th>
-                            <th >Valor</th>
-                            <th >Faixa</th>
-                            <th >Nota</th>
-                        </tr>
-                    </thead>
-                    <tbody>";
-                    $notafinal = 0;
-                    foreach ($viewDataContent as $key) {
-                        $viewData .= "
-                        <tr><td>" . $key['time'] . "</td>
-                            <td>" . $key['categoria'] . "</td>
-                            <td>" . $key['metrica'] . "</td>
-                            <td>" . $key['sprint'] . "</td>
-                            <td>" . $key['valor'] . "</td>
-                            <td>" . $key['faixa'] . "</td>
-                            <td>" . $key['nota'] . "</td>
-                        </tr>";
-                        $notafinal = intval($key['nota']) + $notafinal;
-                    }
-                    $viewData .= "
-                    </tbody>
-                    </table>
-                    <p style='font-size: 25px; text-align: right; color: DarkViolet;'><strong>Score total: ".$notafinal."</strong><p>
-                    <table style='font-size:15px; '>
-                    <thead><tr><th>Faixas de desempenho</th></tr></thead>
-                    <tbody>
-                        <tr><td style='color: red; font-weight: bold;'>Não atendeu</td>
-                            <td align='center'>0</td>
-                            <td align='center'>149</td>
-                        </tr>
-                        <tr><td style='color: orange; font-weight: bold;'>Atendeu parcialmente</td>
-                            <td align='center'>150</td>
-                            <td align='center'>839</td>
-                        </tr>
-                        <tr><td style='color: blue; font-weight: bold;'>Atendeu totalmente</td>
-                            <td align='center'>840</td>
-                            <td align='center'>1000</td>
-                        </tr>
-                        <tr><td style='color: green; font-weight: bold;'>Superou</td>
-                            <td align='center'>1001</td>
-                            <td align='center'>1092</td>
-                        </tr>
-                    </tbody>
-                    </table>
-                </div>
-            </div>";
-        }else{
-            $viewData = "<p style='font-size: 15px; width: 1500px; color: #CD5646FF;'>".$viewDataContent."<p>";
+            $notafinal += (int) $row['nota'];
         }
+    } else {
+        $viewError = is_string($result) ? $result : 'Nenhum dado encontrado para os filtros informados.';
     }
-    include 'templates/templateReportTeam.php';
-?>
+}
+
+include 'templates/templateReportTeam.php';

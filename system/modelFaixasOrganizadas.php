@@ -1,42 +1,41 @@
-<?php
-include_once 'database/DatabaseConnection.php';
-class modelFaixasOrganizadas {
+?php
 
-    // Objeto de conexão
-    private $pdo;
+declare(strict_types=1);
+
+include_once 'database/DatabaseConnection.php';
+
+/**
+ * ModelFaixasOrganizadas — acesso a dados das faixas organizadas.
+ *
+ * @version 2.0.0
+ */
+final class modelFaixasOrganizadas
+{
+    private readonly \PDO $pdo;
 
     public function __construct()
     {
-        // Retorna objeto de conexão
-        $db = new DatabaseConnection();
-        $this->pdo = $db->getPdo();
+        $this->pdo = DatabaseConnection::getInstance()->getPdo();
     }
 
     /**
-     * @method Buscar dados das regras
-     * @version 1.0.1
-     * */ 
-    public function buscaDadosFaixasOrg()
+     * Retorna todas as faixas organizadas.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function buscaDadosFaixasOrg(): array
     {
-        $recordSet = null;
-        try {
-            $querySelect = "select faixa,
-                                flag_inicial,
-                                flag_final,
-                                nota,
-                                percentual,
-                                categoria,
-                                metrica
-                            from painel_faixas_org";
-            $stmt = $this->pdo->query($querySelect);
-            $recordSet =  $stmt->fetchAll();
-            if (!is_array($recordSet)) {
-                throw new Exception("Erro na pesquisa das faixas organizadas.");
-            }
-        } catch (Exception $e) {
-            $recordSet = 'Object buscaDadosFaixasOrg: ' . $e->getMessage();
-        }   
-        return $recordSet;
+        $sql = "SELECT faixa,
+                       flag_inicial,
+                       flag_final,
+                       nota,
+                       percentual,
+                       categoria,
+                       metrica
+                  FROM painel_faixas_org
+                 ORDER BY categoria, metrica, faixa";
+
+        $stmt = $this->pdo->query($sql);
+        return $stmt->fetchAll() ?: [];
     }
 }
-?>

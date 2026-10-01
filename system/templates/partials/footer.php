@@ -1,0 +1,1 @@
+﻿<footer class="container" style="font-size: 10px; width: 1500px;"><hr><p>&copy; <?= date('Y') ?> Score Performance - Uso interno.</p><p>Developer team | <a href="mailto:TeamDeliverys@kroton.onmicrosoft.com">Delivery Managers</a></p></footer>

@@ -1,42 +1,41 @@
-<?php
-include_once 'database/DatabaseConnection.php';
-class modelRegras {
+?php
 
-    // Objeto de conexão
-    private $pdo;
+declare(strict_types=1);
+
+include_once 'database/DatabaseConnection.php';
+
+/**
+ * ModelRegras — acesso a dados das regras de pontuação.
+ *
+ * @version 2.0.0
+ */
+final class modelRegras
+{
+    private readonly \PDO $pdo;
 
     public function __construct()
     {
-        // Retorna objeto de conexão
-        $db = new DatabaseConnection();
-        $this->pdo = $db->getPdo();
+        $this->pdo = DatabaseConnection::getInstance()->getPdo();
     }
 
     /**
-     * @method Buscar dados das regras
-     * @version 1.0.1
-     * */ 
-    public function buscaDadosRegras()
+     * Retorna todas as regras ativas do painel.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function buscaDadosRegras(): array
     {
-        $recordSet = null;
-        try {
-            $querySelect = "select categoria, 
-                                   metricas,
-                                   entendimento,
-                                   regras,
-                                   percentual,
-                                   pontuacao,
-                                   atualizacao
-                              FROM painel_regras";
-            $stmt = $this->pdo->query($querySelect);
-            $recordSet =  $stmt->fetchAll();
-            if (!is_array($recordSet)) {
-                throw new Exception("Erro na pesquisa das regras.");
-            }
-        } catch (Exception $e) {
-            $recordSet = 'Object buscaDadosRegras: ' . $e->getMessage();
-        }   
-        return $recordSet;
+        $sql = "SELECT categoria,
+                       metricas,
+                       entendimento,
+                       regras,
+                       percentual,
+                       pontuacao,
+                       atualizacao
+                  FROM painel_regras
+                 ORDER BY categoria, metricas";
+
+        $stmt = $this->pdo->query($sql);
+        return $stmt->fetchAll() ?: [];
     }
 }
-?>

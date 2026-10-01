@@ -1,282 +1,250 @@
-<?php
-include_once 'database/DatabaseConnection.php';
-class modelScorePerformance {
+?php
 
-    // Objeto de conexão
-    private $pdo;
+declare(strict_types=1);
+
+include_once 'database/DatabaseConnection.php';
+
+/**
+ * ModelScorePerformance — acesso a dados de ScorePerformance.
+ *
+ * Todas as queries que recebem entrada do usuário usam prepared statements.
+ * A stored procedure usa bindParam para evitar SQL injection.
+ *
+ * @version 2.0.0
+ */
+final class modelScorePerformance
+{
+    private readonly \PDO $pdo;
 
     public function __construct()
     {
-        // Retorna objeto de conexão
-        $db = new DatabaseConnection();
-        $this->pdo = $db->getPdo();
+        $this->pdo = DatabaseConnection::getInstance()->getPdo();
     }
+
+    // =========================================================================
+    // Consultas de leitura — dados de Score Performance
+    // =========================================================================
 
     /**
-     * @method Buscar dados das views
-     * @version 1.0.1
-     * */ 
-    public function dataScorePerformance($dataSet = null, $dataSearch = null)
+     * Busca os scores processados com filtros opcionais.
+     *
+     * @param  array<string, string> $filters  ['id_jornadas', 'id_time', 'ds_periodo', 'ds_sprint']
+     * @param  string|null           $queryType  Tipo de pesquisa (ex: 'sql_completa')
+     * @return array<int, array<string, mixed>>
+     */
+    public function dataScorePerformance(array $filters = [], ?string $queryType = null): array
     {
-        $recordSet = null;
-        try {
+        $idJornada = $filters['id_jornadas'] ?? '';
+        $idTime    = $filters['id_time']     ?? '';
+        $periodo   = $filters['ds_periodo']  ?? '';
+        $sprint    = $filters['ds_sprint']   ?? '';
 
-            $id_jornada = (isset($dataSet['id_jornadas']) ? $dataSet['id_jornadas'] : '');
-            $id_time = (isset($dataSet['id_time']) ? $dataSet['id_time'] : '');
-            $periodo = (isset($dataSet['ds_periodo']) ? $dataSet['ds_periodo'] : '');
-            $sprint = (isset($dataSet['ds_sprint']) ? $dataSet['ds_sprint'] : '');
-            
-            // Avaliar tipo de SQL a ser executado
-            switch ($dataSearch) {
-                case 'sql_completa':
-                    // *** dataProcessReportTeam *** ==> score_performance
-                    // Pesquisar por todos os campos do formulário: SCORE PERFORMACE 
-                    $querySelect = "select periodo, sprint, valor, jornada, time, categoria, metrica, faixa, nota, pontuacao
-                                    from score_performance
-                                    where id_jornadas = :idJornada
-                                    and id_time = :idTime
-                                    and periodo = :dsPeriodo
-                                    and sprint = :dsSprint";
-                    $stmt = $this->pdo->prepare($querySelect);
-                    $stmt->bindParam(':idJornada', $id_jornada, PDO::PARAM_STR);
-                    $stmt->bindParam(':idTime', $id_time, PDO::PARAM_STR);
-                    $stmt->bindParam(':dsPeriodo', $periodo, PDO::PARAM_STR);
-                    $stmt->bindParam(':dsSprint', $sprint, PDO::PARAM_STR);                
-                    $stmt->execute();
-                    $recordSet = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                break;
-                case 'sql_jornada_time':
-                    // *** dataProcessReportTeam *** ==> score_performance
-                    // Pesquisar somente por jornada e time
-                    $querySelect = "select periodo, sprint, valor, jornada, time, categoria, metrica, faixa, nota, pontuacao
-                                    from score_performance
-                                    where id_jornadas = :idJornada
-                                    and id_time = :idTime";
-                    $stmt = $this->pdo->prepare($querySelect);
-                    $stmt->bindParam(':idJornada', $id_jornada, PDO::PARAM_STR);
-                    $stmt->bindParam(':idTime', $id_time, PDO::PARAM_STR);
-                    $stmt->execute();
-                    $recordSet = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                break;
-                case 'sql_jornada_time_periodo':
-                    // *** dataProcessReportTeam *** ==> score_performance
-                    // Pesquisar somente por time período, trazendo somente o time
-                    $querySelect = "select periodo, sprint, valor, jornada, time, categoria, metrica, faixa, nota, pontuacao
-                                    from score_performance
-                                    where id_jornadas = :idJornada
-                                    and id_time = :idTime
-                                    and periodo = :dsPeriodo";
-                    $stmt = $this->pdo->prepare($querySelect);
-                    $stmt->bindParam(':idJornada', $id_jornada, PDO::PARAM_STR);
-                    $stmt->bindParam(':idTime', $id_time, PDO::PARAM_STR);
-                    $stmt->bindParam(':dsPeriodo', $periodo, PDO::PARAM_STR);                    
-                    $stmt->execute();
-                    $recordSet = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                break;
-                case 'sql_jornada_time_sprint':
-                    // *** dataProcessReportTeam *** ==> score_performance
-                    // Pesquisar somente por time e sprint, trazendo somente o time
-                    $querySelect = "select periodo, sprint, valor, jornada, time, categoria, metrica, faixa, nota, pontuacao
-                                    from score_performance
-                                    where id_jornadas = :idJornada
-                                    and id_time = :idTime
-                                    and sprint = :dsSprint";
-                    $stmt = $this->pdo->prepare($querySelect);
-                    $stmt->bindParam(':idJornada', $id_jornada, PDO::PARAM_STR);
-                    $stmt->bindParam(':idTime', $id_time, PDO::PARAM_STR);
-                    $stmt->bindParam(':dsSprint', $sprint, PDO::PARAM_STR);
-                    $stmt->execute();
-                    $recordSet = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                break;
-                case 'sql_jornada_sprint':
-                    // *** dataProcessReportJourney *** ==> score_performance_ranking
-                    // Pesquisar somente por Jornada e sprint, trazendo somente o time
-                    $querySelect = "select r.jornada, r.time, r.periodo, r.sprint, r.score_total, r.ranking
-                                    from score_performance_ranking r
-                                    where r.id_jornadas = :idJornada
-                                    and r.sprint = :dsSprint";
-                    $stmt = $this->pdo->prepare($querySelect);
-                    $stmt->bindParam(':idJornada', $id_jornada, PDO::PARAM_STR);
-                    $stmt->bindParam(':dsSprint', $sprint, PDO::PARAM_STR);
-                    $stmt->execute();
-                    $recordSet = $stmt->fetchAll(PDO::FETCH_ASSOC);                
-                break;
-                case 'sql_jornada_periodo':
-                    // *** dataProcessReportJourney *** ==> score_performance_ranking
-                    // Pesquisar somente por time período, trazendo somente o time
-                    $querySelect = "select r.jornada, r.time, r.periodo, r.sprint, r.score_total, r.ranking
-                                    from score_performance_ranking r
-                                    where r.id_jornadas = :idJornada
-                                    and r.periodo = :dsPeriodo";
-                    $stmt = $this->pdo->prepare($querySelect);
-                    $stmt->bindParam(':idJornada', $id_jornada, PDO::PARAM_STR);
-                    $stmt->bindParam(':dsPeriodo', $periodo, PDO::PARAM_STR);                    
-                    $stmt->execute();
-                    $recordSet = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                break;
-                case 'sql_jornada':
-                    // *** dataProcessReportJourney *** ==> score_performance_ranking
-                    // Pesquisar somente por time período, trazendo somente o time
-                    $querySelect = "select r.jornada, r.time, r.periodo, r.sprint, r.score_total, r.ranking
-                                    from score_performance_ranking r
-                                    where r.id_jornadas = :idJornada";
-                    $stmt = $this->pdo->prepare($querySelect);
-                    $stmt->bindParam(':idJornada', $id_jornada, PDO::PARAM_STR);
-                    $stmt->execute();
-                    $recordSet = $stmt->fetchAll(PDO::FETCH_ASSOC);                
-                break;
-                default:
-                    // Pesquisar todos os dados, independente de parâmetros
-                    $querySelect = "select periodo, sprint, valor, jornada, time, categoria, metrica, faixa,nota
-                                    from score_performance;";
-                    $stmt = $this->pdo->query($querySelect);
-                    $recordSet =  $stmt->fetchAll();
-                break;
-            }
-            
-
-            if (!is_array($recordSet)) {
-                throw new Exception("Erro na pesquisa dos dados gravados.");
-            }
-        } catch (Exception $e) {
-            $recordSet = 'Objeto dataScorePerformance: ' . $e->getMessage();
-        }   
-        return $recordSet;
+        return match ($queryType) {
+            'sql_completa' => $this->fetchScoreByAll($idJornada, $idTime, $periodo, $sprint),
+            'sql_jornada_time' => $this->fetchScoreByJourneyAndTeam($idJornada, $idTime),
+            'sql_jornada_time_periodo' => $this->fetchScoreByJourneyTeamPeriod($idJornada, $idTime, $periodo),
+            'sql_jornada_time_sprint' => $this->fetchScoreByJourneyTeamSprint($idJornada, $idTime, $sprint),
+            'sql_jornada_sprint' => $this->fetchRankingByJourneySprint($idJornada, $sprint),
+            'sql_jornada_periodo' => $this->fetchRankingByJourneyPeriod($idJornada, $periodo),
+            'sql_jornada' => $this->fetchRankingByJourney($idJornada),
+            default => $this->fetchAllScores(),
+        };
     }
+
+    /** @return array<int, array<string, mixed>> */
+    public function dataScorePerformanceJourney(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT id_jornadas, descricao
+               FROM jornadas
+              WHERE ativo = 'S'
+              ORDER BY descricao ASC"
+        );
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function dataScorePerformanceSquads(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT id_time, jornadas_id, descricao
+               FROM times
+              WHERE ativo = 'S'
+              ORDER BY descricao ASC"
+        );
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function dataScorePerformanceMetrics(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT id_metrica, descricao
+               FROM metricas
+              WHERE ativo = 'S'
+              ORDER BY descricao ASC"
+        );
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function dataScorePerformanceCategories(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT id_categoria, descricao
+               FROM categoria
+              WHERE ativo = 'S'
+              ORDER BY descricao ASC"
+        );
+        return $stmt->fetchAll() ?: [];
+    }
+
+    // =========================================================================
+    // Gravação via stored procedure — usa bindParam, sem interpolação
+    // =========================================================================
 
     /**
-     * @method Buscar dados das Jorndas
-     * @version 1.0.1
-     * */ 
-    public function dataScorePerformanceJourney()
+     * Grava um registro de Score Performance via stored procedure.
+     *
+     * @param  array<string, mixed> $parameters
+     * @return array<int, array<string, mixed>>
+     * @throws \RuntimeException se os parâmetros forem inválidos ou a procedure falhar
+     */
+    public function setDataScorePerformance(array $parameters): array
     {
-        $recordSet = null;
-        try {
-            $querySelect = "select id_jornadas,
-	                               descricao
-                            from jornadas
-                            where ativo = 'S'
-							order by descricao asc";
-            $stmt = $this->pdo->query($querySelect);
-            $recordSet =  $stmt->fetchAll();
-            if (!is_array($recordSet)) {
-                throw new Exception("Erro na pesquisa das Jornadas.");
+        $required = ['p_id_jornada', 'p_id_time', 'p_id_categoria', 'p_id_metrica',
+                     'p_ds_periodo', 'p_ds_sprint', 'p_vl_regra'];
+
+        foreach ($required as $key) {
+            if (!isset($parameters[$key]) || $parameters[$key] === '') {
+                throw new \RuntimeException("Parâmetro obrigatório ausente: {$key}");
             }
-        } catch (Exception $e) {
-            $recordSet = 'Objeto dataScorePerformanceJourney: ' . $e->getMessage();
-        }   
-        return $recordSet;
-    }
-
-    /**
-     * @method Buscar dados das views
-     * @version 1.0.1
-     * */ 
-    public function dataScorePerformanceSquads()
-    {
-        $recordSet = null;
-        try {
-            $querySelect = "select id_time,
-	                               jornadas_id,
-                                   descricao
-                            from times
-                            where ativo  = 'S'
-							order by descricao asc";
-            $stmt = $this->pdo->query($querySelect);
-            $recordSet =  $stmt->fetchAll();
-            if (!is_array($recordSet)) {
-                throw new Exception("Erro na pesquisa dos Times.");
-            }
-        } catch (Exception $e) {
-            $recordSet = 'Objeto dataScorePerformanceSquads: ' . $e->getMessage();
-        }   
-        return $recordSet;
-    } 
-
-    /**
-     * @method Buscar dados das views
-     * @version 1.0.1
-     * */ 
-    public function dataScorePerformanceMetrics()
-    {
-        $recordSet = null;
-        try {
-            $querySelect = "select id_metrica,
-                                   descricao
-                            from metricas
-                            where ativo  = 'S'";
-            $stmt = $this->pdo->query($querySelect);
-            $recordSet =  $stmt->fetchAll();
-            if (!is_array($recordSet)) {
-                throw new Exception("Erro na pesquisa dos métricas.");
-            }
-        } catch (Exception $e) {
-            $recordSet = 'Objeto dataScorePerformanceMetrics: ' . $e->getMessage();
-        }   
-        return $recordSet;
-    }
-
-     /**
-     * @method Buscar dados das views
-     * @version 1.0.1
-     * */ 
-    public function dataScorePerformanceCategories()
-    {
-        $recordSet = null;
-        try {
-            $querySelect = "select id_categoria,
-                                   descricao
-                            from categoria
-                            where ativo  = 'S'";
-            $stmt = $this->pdo->query($querySelect);
-            $recordSet =  $stmt->fetchAll();
-            if (!is_array($recordSet)) {
-                throw new Exception("Erro na pesquisa dos categoria.");
-            }
-        } catch (Exception $e) {
-            $recordSet = 'Objeto dataScorePerformanceCategories: ' . $e->getMessage();
-        }   
-        return $recordSet;
-    }
-
-        /**
-     * @method Buscar dados das views
-     * @version 1.0.1
-     * */ 
-    public function setDataScorePerformance($parameters)
-    {
-        $resultSet = null;
-        $recordSet = null;
-        try {
-            if ($parameters != null) {
-                
-                $queryProcedure = "CALL ScorePerformance(".$parameters['p_id_jornada'].",
-                                                         ".$parameters['p_id_time'].", 
-                                                         ".$parameters['p_id_categoria'].",
-                                                         ".$parameters['p_id_metrica'].",
-                                                        '".$parameters['p_ds_periodo']."',
-                                                        '".$parameters['p_ds_sprint']."',
-                                                         ".$parameters['p_vl_regra'].",
-                                                           @p_return);";
-                $resultSet = $this->pdo->query($queryProcedure);
-
-                if ($resultSet != null) {
-
-                    $querySelectResult = "select @p_return as dadosGravados;";
-                    $stmt = $this->pdo->query($querySelectResult);
-                    $recordSet =  $stmt->fetchAll();
-
-                }else{
-                    throw new Exception("Erro na execução da Procedure: ScorePerformance.");
-                }
-            }else{
-                throw new Exception("Erro nos dados informados: ".$parameters);
-            }    
-        } catch (Exception $e) {
-            $recordSet = 'Objeto setDataScorePerformance: ' . $e->getMessage();
         }
 
-        return $recordSet;
+        // Prepared statement para a stored procedure — sem interpolação de string
+        $sql = "CALL ScorePerformance(:idJornada, :idTime, :idCategoria, :idMetrica,
+                                     :dsPeriodo, :dsSprint, :vlRegra, @p_return)";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindParam(':idJornada',  $parameters['p_id_jornada'],   \PDO::PARAM_INT);
+        $stmt->bindParam(':idTime',     $parameters['p_id_time'],      \PDO::PARAM_INT);
+        $stmt->bindParam(':idCategoria',$parameters['p_id_categoria'], \PDO::PARAM_INT);
+        $stmt->bindParam(':idMetrica',  $parameters['p_id_metrica'],   \PDO::PARAM_INT);
+        $stmt->bindParam(':dsPeriodo',  $parameters['p_ds_periodo'],   \PDO::PARAM_STR);
+        $stmt->bindParam(':dsSprint',   $parameters['p_ds_sprint'],    \PDO::PARAM_STR);
+        $stmt->bindParam(':vlRegra',    $parameters['p_vl_regra'],     \PDO::PARAM_STR);
+        $stmt->execute();
+
+        $result = $this->pdo->query("SELECT @p_return AS dadosGravados");
+        return $result->fetchAll() ?: [];
+    }
+
+    // =========================================================================
+    // Métodos privados — cada tipo de consulta em método dedicado
+    // =========================================================================
+
+    /** @return array<int, array<string, mixed>> */
+    private function fetchAllScores(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT periodo, sprint, valor, jornada, time, categoria, metrica, faixa, nota
+               FROM score_performance"
+        );
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function fetchScoreByAll(string $jornada, string $time, string $periodo, string $sprint): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT periodo, sprint, valor, jornada, time, categoria, metrica, faixa, nota, pontuacao
+               FROM score_performance
+              WHERE id_jornadas = :idJornada
+                AND id_time     = :idTime
+                AND periodo     = :dsPeriodo
+                AND sprint      = :dsSprint"
+        );
+        $stmt->execute([':idJornada' => $jornada, ':idTime' => $time,
+                        ':dsPeriodo' => $periodo, ':dsSprint' => $sprint]);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function fetchScoreByJourneyAndTeam(string $jornada, string $time): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT periodo, sprint, valor, jornada, time, categoria, metrica, faixa, nota, pontuacao
+               FROM score_performance
+              WHERE id_jornadas = :idJornada
+                AND id_time     = :idTime"
+        );
+        $stmt->execute([':idJornada' => $jornada, ':idTime' => $time]);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function fetchScoreByJourneyTeamPeriod(string $jornada, string $time, string $periodo): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT periodo, sprint, valor, jornada, time, categoria, metrica, faixa, nota, pontuacao
+               FROM score_performance
+              WHERE id_jornadas = :idJornada
+                AND id_time     = :idTime
+                AND periodo     = :dsPeriodo"
+        );
+        $stmt->execute([':idJornada' => $jornada, ':idTime' => $time, ':dsPeriodo' => $periodo]);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function fetchScoreByJourneyTeamSprint(string $jornada, string $time, string $sprint): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT periodo, sprint, valor, jornada, time, categoria, metrica, faixa, nota, pontuacao
+               FROM score_performance
+              WHERE id_jornadas = :idJornada
+                AND id_time     = :idTime
+                AND sprint      = :dsSprint"
+        );
+        $stmt->execute([':idJornada' => $jornada, ':idTime' => $time, ':dsSprint' => $sprint]);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function fetchRankingByJourneySprint(string $jornada, string $sprint): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT r.jornada, r.time, r.periodo, r.sprint, r.score_total, r.ranking
+               FROM score_performance_ranking r
+              WHERE r.id_jornadas = :idJornada
+                AND r.sprint      = :dsSprint"
+        );
+        $stmt->execute([':idJornada' => $jornada, ':dsSprint' => $sprint]);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function fetchRankingByJourneyPeriod(string $jornada, string $periodo): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT r.jornada, r.time, r.periodo, r.sprint, r.score_total, r.ranking
+               FROM score_performance_ranking r
+              WHERE r.id_jornadas = :idJornada
+                AND r.periodo     = :dsPeriodo"
+        );
+        $stmt->execute([':idJornada' => $jornada, ':dsPeriodo' => $periodo]);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function fetchRankingByJourney(string $jornada): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT r.jornada, r.time, r.periodo, r.sprint, r.score_total, r.ranking
+               FROM score_performance_ranking r
+              WHERE r.id_jornadas = :idJornada"
+        );
+        $stmt->execute([':idJornada' => $jornada]);
+        return $stmt->fetchAll() ?: [];
     }
 }
-?>

@@ -1,52 +1,53 @@
-<?php
+?php
+
+declare(strict_types=1);
+
 /**
- *  @todo classe de conexão com banco de dados.
- *  @method getPdo -> Objeto de Conexão
- *  @method getData -> Objeto de Pesquisa
- *  @method insertData -> Objeto de Registro
- *  @user_bd user -> root || pass -> cogna_2025
- *  @user_bd user -> score_performance || pass -> Cogna@2025
- *  @version: 1.0.0
- *  @since: 07/2024
+ * DatabaseConnection — Singleton PDO para MySQL.
+ *
+ * Lê as credenciais do array de configuração injetado no construtor,
+ * permitindo substituição fácil por variáveis de ambiente no futuro.
+ *
+ * @version 2.0.0
+ * @since   07/2024  (refatorado 2026)
  */
-class DatabaseConnection
+final class DatabaseConnection
 {
+    private static ?self $instance = null;
+    private readonly \PDO $pdo;
 
-    // Informações de conexão
-    /*private $host = 'localhost';
-    private $dbName = 'score_performance';
-    private $username = 'score_performance';
-    private $password = 'Cogna@2025';*/
-    private $host = 'localhost';
-    private $dbName = 'score_performance';
-    private $username = 'root';
-    private $password = '';
-    
-    private $pdo;
-
-    // Efetivação de conexão
-    public function __construct()
+    /** Impede instanciação direta; use DatabaseConnection::getInstance(). */
+    private function __construct()
     {
-        try {
-            $dsn = "mysql:host={$this->host};dbname={$this->dbName};charset=utf8mb4";
-            $options = [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES   => false,
-            ];
-            $this->pdo = new PDO($dsn, $this->username, $this->password, $options);
-        } catch (PDOException $e) {
-            // Lidar com erros de conexão de forma segura
-            print 'Erro de conexão: ' . $e->getMessage();
-        }
+        $host     = 'localhost';
+        $dbName   = 'score_performance';
+        $username = 'root';
+        $password = '';
+
+        $dsn = "mysql:host={$host};dbname={$dbName};charset=utf8mb4";
+
+        $this->pdo = new \PDO($dsn, $username, $password, [
+            \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
+            \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+            \PDO::ATTR_EMULATE_PREPARES   => false,
+        ]);
     }
 
-    /**
-     * @method Objetos de Conexão
-     * @version 1.0.1
-     * */ 
-    public function getPdo()
+    /** Garante que apenas uma conexão PDO seja criada por processo PHP. */
+    public static function getInstance(): self
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    /** Retorna a instância PDO configurada. */
+    public function getPdo(): \PDO
     {
         return $this->pdo;
     }
+
+    /** Impede clonagem do Singleton. */
+    private function __clone(): void {}
 }

@@ -1,53 +1,58 @@
-<?php
-include 'modelFaixasDetalhadas.php';
-class controllerFaixasDetalhadas {
+?php
 
-    // Objeto data model
-    private $dataModelFxDet;
-    private $dataModelFxIde;
+declare(strict_types=1);
+
+include_once 'modelFaixasDetalhadas.php';
+
+/**
+ * ControllerFaixasDetalhadas — orquestra a exibição das faixas detalhadas.
+ *
+ * Retorna arrays de dados; não gera HTML.
+ *
+ * @version 2.0.0
+ */
+final class controllerFaixasDetalhadas
+{
+    private readonly modelFaixasDetalhadas $model;
 
     public function __construct()
     {
-        // Retorna objeto de dados
-        $model = new modelFaixasDetalhadas();
-        $this->dataModelFxDet = $model->buscaDadosFaixasDet();
-        $this->dataModelFxIde = $model->buscaDadosFaixasIdeal();
+        $this->model = new modelFaixasDetalhadas();
     }
 
     /**
-     * @method Buscar dados do objeto consulta
-     * @version 1.0.1
-     * */ 
-    public function DadosFaixasDetalhadas()
+     * Retorna todas as faixas detalhadas.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function dadosFaixasDetalhadas(): array
     {
-        $resultSet = null;
-        try {
-            $resultSet = $this->dataModelFxDet;
-            if (!is_array($resultSet)) {
-                throw new Exception("Erro na processamento da pesquisa: ". $resultSet);  
-            }
-        } catch (Exception $e) {
-            $resultSet = 'Object setDataView: ' . $e->getMessage();
-        }   
-        return $resultSet;        
+        return $this->model->buscaDadosFaixasDet();
     }
 
     /**
-     * @method Buscar dados do objeto consulta
-     * @version 1.0.1
-     * */ 
-    public function DadosFaixasDetalhadasIdeais()
+     * Retorna apenas as faixas com classificação "Atendeu Totalmente".
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function dadosFaixasDetalhadasIdeais(): array
     {
-        $resultSet = null;
-        try {
-            $resultSet = $this->dataModelFxIde;
-            if (!is_array($resultSet)) {
-                throw new Exception("Erro na processamento da pesquisa das Faixas Ideais: ". $resultSet);  
-            }
-        } catch (Exception $e) {
-            $resultSet = 'Object setDataView: ' . $e->getMessage();
-        }   
-        return $resultSet;        
-    }    
+        return $this->model->buscaDadosFaixasIdeal();
+    }
+
+    /**
+     * @deprecated Use dadosFaixasDetalhadas() (camelCase)
+     */
+    public function DadosFaixasDetalhadas(): array
+    {
+        return $this->dadosFaixasDetalhadas();
+    }
+
+    /**
+     * @deprecated Use dadosFaixasDetalhadasIdeais() (camelCase)
+     */
+    public function DadosFaixasDetalhadasIdeais(): array
+    {
+        return $this->dadosFaixasDetalhadasIdeais();
+    }
 }
-?>

@@ -1,33 +1,40 @@
-<?php
-include 'modelFaixasOrganizadas.php';
-class controllerFaixasOrganizadas {
+?php
 
-     // Objeto data model
-    private $dataModel;
+declare(strict_types=1);
+
+include_once 'modelFaixasOrganizadas.php';
+
+/**
+ * ControllerFaixasOrganizadas — orquestra a exibição das faixas organizadas.
+ *
+ * Retorna arrays de dados; não gera HTML.
+ *
+ * @version 2.0.0
+ */
+final class controllerFaixasOrganizadas
+{
+    private readonly modelFaixasOrganizadas $model;
 
     public function __construct()
     {
-        // Retorna objeto de dados
-        $model = new modelFaixasOrganizadas();
-        $this->dataModel = $model->buscaDadosFaixasOrg();
+        $this->model = new modelFaixasOrganizadas();
     }
 
     /**
-     * @method Buscar dados do objeto View
-     * @version 1.0.1
-     * */ 
-    public function DadosFaixasOrganizadas()
+     * Retorna todas as faixas organizadas.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function dadosFaixasOrganizadas(): array
     {
-        $resultSet = null;
-        try {
-            $resultSet = $this->dataModel;
-            if (!is_array($resultSet)) {
-                throw new Exception("Erro na processamento da pesquisa: ". $resultSet);
-            }
-        } catch (Exception $e) {
-            $resultSet = 'Object setDataView: ' . $e->getMessage();
-        }   
-        return $resultSet;        
+        return $this->model->buscaDadosFaixasOrg();
+    }
+
+    /**
+     * @deprecated Use dadosFaixasOrganizadas() (camelCase)
+     */
+    public function DadosFaixasOrganizadas(): array
+    {
+        return $this->dadosFaixasOrganizadas();
     }
 }
-?>

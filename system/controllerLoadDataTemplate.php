@@ -1,173 +1,182 @@
-<?php
- include 'controllerScorePerformance.php';
- 
+?php
 
-class controllerLoadDataTemplate extends controllerScorePerformance{   
-    
-    private $dataLoad;
+declare(strict_types=1);
 
-    public function __construct()
+include_once 'controllerScorePerformance.php';
+
+/**
+ * ControllerLoadDataTemplate — processa o upload em lote via CSV.
+ *
+ * Usa composição em vez de herança: recebe controllerScorePerformance
+ * como dependência injetada no construtor.
+ *
+ * @version 2.0.0
+ */
+final class controllerLoadDataTemplate
+{
+    /** Colunas esperadas no CSV (separador ponto-e-vírgula). */
+    private const EXPECTED_HEADER = 'ID_JORNADA;ID_TIME;ID_CATEGORIA;ID_METRICA;PERIODO;SPRINT;VALOR';
+
+    /** Tipos de arquivo aceitos. */
+    private const ALLOWED_TYPES = ['text/csv', 'text/plain', 'application/vnd.ms-excel', 'csv', 'txt'];
+
+    private readonly controllerScorePerformance $scoreController;
+
+    public function __construct(?controllerScorePerformance $scoreController = null)
     {
-        $this->dataLoad = new controllerScorePerformance();
+        $this->scoreController = $scoreController ?? new controllerScorePerformance();
     }
 
-    // Função para validar o arquivo CSV
-    public function validarTemplate($arquivo, $colunasEsperadas) {
-        
-        // Armazena os erros encontrados
-        $erros = [];
+    // =========================================================================
+    // Validação do CSV
+    // =========================================================================
 
-        // Verificar se o arquivo existe
-        if (!file_exists($arquivo) || !is_readable($arquivo)) {
-            $erros[] = "Arquivo não encontrado ou não pode ser lido.";
+    /**
+     * Valida o arquivo CSV contra o cabeçalho esperado e as regras de cada coluna.
+     *
+     * @param  string   $filePath         Caminho temporário do arquivo
+     * @param  string[] $expectedColumns  Array com os nomes das colunas esperadas
+     * @return string[]  Lista de erros encontrados (vazia se válido)
+     */
+    public function validarTemplate(string $filePath, array $expectedColumns): array
+    {
+        $errors = [];
 
-        }else{
-
-            // Abrir o arquivo para leitura
-            if (($handle = fopen($arquivo, 'r')) !== FALSE) {
-                
-                // Ler a primeira linha (cabeçalho)
-                $cabecalho = fgetcsv($handle);
-
-                // Verificar se o cabeçalho corresponde ao esperado
-                if ($cabecalho !== $colunasEsperadas) {
-                    $erros[] = "Template inválido. Colunas fora do padrão esperado.";
-
-                } else {
-                    
-                    // Iterar sobre as linhas de dados
-                    $linhaNumero = 1;
-                    while (($dados = fgetcsv($handle)) !== FALSE) {
-                        $linhaNumero++;
-
-                        // Verificar o número de colunas em cada linha
-                        if (count($dados) != count($colunasEsperadas)) {
-                            $erros[] = "Erro na linha $linhaNumero: número de colunas incorreto.";
-                            continue;
-                        }
-
-                        // Validar o conteúdo de cada coluna
-                        foreach ($dados as $indice => $valor) {
-                            $coluna = $colunasEsperadas[$indice];
-
-                            // validações para as colunas do template
-                            if ($coluna == 'ID_JORNADA' && !is_numeric($valor)) {
-                                $erros[] = "Erro na linha $linhaNumero: valor inválido na coluna 'ID_JORNADA [não é um número]'.";
-                            }
-                            if ($coluna == 'ID_TIME' && !is_numeric($valor)) {
-                                $erros[] = "Erro na linha $linhaNumero: valor inválido na coluna 'ID_TIME [não é um número]'.";
-                            }
-                            if ($coluna == 'ID_CATEGORIA' && !is_numeric($valor)) {
-                                $erros[] = "Erro na linha $linhaNumero: valor inválido na coluna 'ID_CATEGORIA [não é um número]'.";
-                            }
-                            if ($coluna == 'ID_METRICA' && !is_numeric($valor)) {
-                                $erros[] = "Erro na linha $linhaNumero: valor inválido na coluna 'ID_METRICA [não é um número]'.";
-                            }
-                            if ($coluna == 'PERIODO' && !is_string($valor)) {
-                                $erros[] = "Erro na linha $linhaNumero: valor inválido na coluna 'PERIODO [não é um texto]' .";
-                            }
-                            if ($coluna == 'SPRINT' && !is_string($valor)) {
-                                $erros[] = "Erro na linha $linhaNumero: valor inválido na coluna 'SPRINT [não é um texto]'.";
-                            }
-                            if ($coluna == 'VALOR' && !is_float($valor)) {
-                                $erros[] = "Erro na linha $linhaNumero: valor inválido na coluna 'SPRINT [não é um número]'.";
-                            }                            
-                            /* Exemplo de validação para a coluna "email" (deve ser um e-mail válido)
-                            if ($coluna == 'ID_TIME' && !filter_var($valor, FILTER_VALIDATE_EMAIL)) {
-                                $this->erros[] = "Erro na linha $linhaNumero: e-mail inválido na coluna 'ID_TIME'.";
-                            }
-                            // Exemplo de validação para campos obrigatórios
-                            if (empty($valor) && in_array($coluna, ['nome', 'email'])) {
-                                $this->erros[] = "Erro na linha $linhaNumero: o campo '$coluna' é obrigatório.";
-                            }*/
-                        }
-                    }
-                }
-                fclose($handle);
-            } else {
-                $erros[] = "Erro ao abrir o arquivo.";
-            }
+        if (!file_exists($filePath) || !is_readable($filePath)) {
+            return ['Arquivo não encontrado ou não pode ser lido.'];
         }
-        return $erros;
+
+        $handle = fopen($filePath, 'r');
+        if ($handle === false) {
+            return ['Erro ao abrir o arquivo.'];
+        }
+
+        $header = fgetcsv($handle, separator: ';');
+
+        if ($header !== $expectedColumns) {
+            fclose($handle);
+            return ['Template inválido. Colunas fora do padrão esperado.'];
+        }
+
+        $lineNumber = 1;
+        while (($row = fgetcsv($handle, separator: ';')) !== false) {
+            $lineNumber++;
+
+            if (count($row) !== count($expectedColumns)) {
+                $errors[] = "Linha {$lineNumber}: número de colunas incorreto.";
+                continue;
+            }
+
+            $errors = array_merge($errors, $this->validateRow($row, $expectedColumns, $lineNumber));
+        }
+
+        fclose($handle);
+        return $errors;
     }
-    
 
-    public function lerDadosArquivos($fileTemp, $filesType, $filesName, $extension){
-       
-        try{
-            $viewDataLoad = [];
+    // =========================================================================
+    // Processamento em lote
+    // =========================================================================
 
-            //verificar o tipo do arquivo
-            $typeFileAllowed = ['text/csv','text/plain','application/vnd.ms-excel','csv','txt'];
-
-            if (!in_array($filesType, $typeFileAllowed) && (!in_array($extension, $typeFileAllowed)))  {
-                throw new Exception("Tipo de arquivo não permitido: ".$filesName);
-
-            }else{
-                // Validar o arquivo CSV            
-                $erros = $this->validarTemplate($fileTemp, ['ID_JORNADA;ID_TIME;ID_CATEGORIA;ID_METRICA;PERIODO;SPRINT;VALOR']);
-                
-                // Exibir os erros, se houver
-                if (!empty($erros)) {
-                    $message = "Foram encontrados os seguintes erros:\n";
-                    foreach ($erros as $erro) {
-                        $message .= " $erro\n";
-                    }
-                    throw new Exception($message);
-                } else {
-                    $count = 0;
-                    $paramenter = [];
-                    set_time_limit(0);
-
-                    //Abre o arquivo para ler e pular a primeira linha do template
-                    $file = fopen($fileTemp, "r");
-                    if(!$file){
-                        throw new Exception("Erro ao abrir o arquivo: ".$filesName);
-                    }else{
-                        fgets($file);
-                        while (!feof($file)) {
-                            $linha = fgets($file);
-                            $itens[$count] = explode(';', $linha);
-                            $count++;
-                        }
-                        fclose($file);    
-                    
-                        //Grava a carga de lançamento dos valores e processa a nota da faixa
-                        if ($count > 0) {
-                            
-                            // Prepara as variáveis conforme retorno do arquivo
-                            $count = 0;
-                            foreach($itens as $key){
-                                if(isset($key[0])){
-                                    @$paramenter[$count] = [
-                                        'id_jornadas' => $key[0],
-                                        'id_time'     => $key[1],
-                                        'id_categoria'=> $key[2],
-                                        'id_metrica'  => $key[3],
-                                        'ds_periodo'  => $key[4],
-                                        'ds_sprint'   => $key[5],
-                                        'valor_regra' => $key[6]];
-                                    $count++;
-                                }
-                            }
-                            // Faz o loop de registro de dados conforme array montado
-                            foreach($paramenter as $value){
-                                if(($value['id_time'] !== '' )&&( $value['valor_regra'] !== '')){
-                                    // Chama a função para gravar no banco
-                                    $viewDataLoad[] = $this->dataLoad->controllerSetDataScorePerformance($value);
-                                }
-                            }
-                            // removendo mensagens repetidas
-                            $viewDataLoad = array_unique($viewDataLoad);
-                        }
-                    }                    
-                }
-            }
-        }catch(Exception $e){
-            return $e->getMessage();
+    /**
+     * Lê e processa o arquivo CSV em lote.
+     *
+     * Cada linha é processada de forma independente; falhas individuais
+     * não interrompem o lote.
+     *
+     * @return array<int, string>|string  Array de resultados por linha ou mensagem de erro
+     */
+    public function lerDadosArquivos(
+        string $fileTemp,
+        string $filesType,
+        string $filesName,
+        string $extension
+    ): array|string {
+        if (!in_array($filesType, self::ALLOWED_TYPES, true) &&
+            !in_array($extension, self::ALLOWED_TYPES, true)) {
+            return "Tipo de arquivo não permitido: {$filesName}";
         }
-        // removendo valores repetidos
-        return $viewDataLoad;
+
+        $expectedCols = explode(';', self::EXPECTED_HEADER);
+        $errors = $this->validarTemplate($fileTemp, $expectedCols);
+
+        if (!empty($errors)) {
+            return "Erros encontrados:\n" . implode("\n", $errors);
+        }
+
+        $handle = fopen($fileTemp, 'r');
+        if ($handle === false) {
+            return "Erro ao abrir o arquivo: {$filesName}";
+        }
+
+        fgets($handle); // pula cabeçalho
+
+        $results    = [];
+        $lineNumber = 1;
+
+        set_time_limit(300);
+
+        while (($line = fgets($handle)) !== false) {
+            $lineNumber++;
+            $line = rtrim($line, "\r\n");
+
+            if ($line === '') {
+                continue;
+            }
+
+            $cols = explode(';', $line);
+
+            if (!isset($cols[6]) || trim($cols[1]) === '' || trim($cols[6]) === '') {
+                continue;
+            }
+
+            $results[] = $this->scoreController->controllerSetDataScorePerformance([
+                'id_jornadas'  => trim($cols[0]),
+                'id_time'      => trim($cols[1]),
+                'id_categoria' => trim($cols[2]),
+                'id_metrica'   => trim($cols[3]),
+                'ds_periodo'   => trim($cols[4]),
+                'ds_sprint'    => trim($cols[5]),
+                'valor_regra'  => trim($cols[6]),
+            ]);
+        }
+
+        fclose($handle);
+        set_time_limit(30); // restaura limite padrão
+
+        return array_values(array_unique($results));
+    }
+
+    // =========================================================================
+    // Privado
+    // =========================================================================
+
+    /**
+     * Valida o conteúdo de uma linha do CSV.
+     *
+     * @param  string[] $row
+     * @param  string[] $columns
+     * @return string[]
+     */
+    private function validateRow(array $row, array $columns, int $lineNumber): array
+    {
+        $errors = [];
+
+        foreach ($columns as $index => $column) {
+            $value = $row[$index] ?? '';
+
+            $isNumericColumn = in_array($column, ['ID_JORNADA', 'ID_TIME', 'ID_CATEGORIA', 'ID_METRICA'], true);
+            $isFloatColumn   = $column === 'VALOR';
+
+            if ($isNumericColumn && filter_var($value, FILTER_VALIDATE_INT) === false) {
+                $errors[] = "Linha {$lineNumber}: valor inválido na coluna '{$column}' (esperado inteiro).";
+            } elseif ($isFloatColumn && filter_var($value, FILTER_VALIDATE_FLOAT) === false) {
+                $errors[] = "Linha {$lineNumber}: valor inválido na coluna '{$column}' (esperado decimal).";
+            } elseif ($value === '' && in_array($column, ['PERIODO', 'SPRINT'], true)) {
+                $errors[] = "Linha {$lineNumber}: campo obrigatório '{$column}' está vazio.";
+            }
+        }
+
+        return $errors;
     }
 }
-?>

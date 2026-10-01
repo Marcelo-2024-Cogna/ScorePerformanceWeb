@@ -1,34 +1,40 @@
-<?php
-include 'modelRegras.php';
-class controllerRegras {
+?php
 
-    // Objeto data model
-    private $dataModel;
+declare(strict_types=1);
+
+include_once 'modelRegras.php';
+
+/**
+ * ControllerRegras — orquestra a exibição das regras de pontuação.
+ *
+ * Retorna arrays de dados; não gera HTML.
+ *
+ * @version 2.0.0
+ */
+final class controllerRegras
+{
+    private readonly modelRegras $model;
 
     public function __construct()
     {
-        // Retorna objeto de dados
-        $model = new modelRegras();
-        $this->dataModel = $model->buscaDadosRegras();
+        $this->model = new modelRegras();
     }
 
     /**
-     * @method Buscar dados do objeto View
-     * @version 1.0.1
-     * */ 
-    public function DadosRegras()
+     * Retorna os dados das regras para exibição na view.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function dadosRegras(): array
     {
-        $resultSet = null;
-        try {
+        return $this->model->buscaDadosRegras();
+    }
 
-            $resultSet = $this->dataModel;
-            if (!is_array($resultSet)) {
-                throw new Exception("Erro na processamento da pesquisa: ". $resultSet);
-            }
-        } catch (Exception $e) {
-            $resultSet = 'Object setDataView: ' . $e->getMessage();
-        }   
-        return $resultSet;        
+    /**
+     * @deprecated Use dadosRegras() (camelCase)
+     */
+    public function DadosRegras(): array
+    {
+        return $this->dadosRegras();
     }
 }
-?>
