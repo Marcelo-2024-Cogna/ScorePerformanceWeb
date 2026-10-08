@@ -616,26 +616,44 @@ classDiagram
 As propriedades abaixo devem ser verificáveis por testes automatizados:
 
 ### Property 1: Singleton DatabaseConnection
+
+**Validates: Requirements 2.1**
+
 > Para quaisquer duas chamadas `DatabaseConnection::getInstance()` no mesmo processo PHP, o objeto retornado é identicamente o mesmo (`===`).<br>
 Forma: `∀ (c1, c2) ∈ getInstance × getInstance : c1() === c2()`<br>
 
 ### Property 2: Autoloader PSR-4
+
+**Validates: Requirements 1.2, 1.3**
+
 > Para qualquer classe `ScorePerformance\X\Y`, o autoloader resolve o caminho como `src/X/Y.php`.<br>
 Forma: `∀ class ∈ ScorePerformance\*: autoload(class) → src/ + class.replace('\\','/') + '.php'`<br>
 
 ### Property 3: Repository retorna array
+
+**Validates: Requirements 5.4**
+
 > Para qualquer método `find*()` de qualquer Repository, o retorno é sempre `array` (possivelmente vazio), nunca `null`.<br>
 Forma: `∀ repo, ∀ method ∈ find*: is_array(repo.method()) === true`<br>
 
 ### Property 4: Batch Load integridade do relatório
+
+**Validates: Requirements 10.2**
+
 > O total de linhas de um relatório de lote é sempre igual à soma de sucesso e falha.<br>
 Forma: `∀ csv: report.total === report.success + report.failure`<br>
 
 ### Property 5: TemplateEngine sem vazamento de escopo
+
+**Validates: Requirements 3.2**
+
 > Uma segunda chamada a `render()` não tem acesso a variáveis da primeira chamada.<br>
 Forma: `∀ (d1, d2) com chaves disjuntas: vars(d1) ∩ scope(render(d2)) = ∅`<br>
 
 ### Property 6: CsvValidator rejeita cabeçalho inválido
+
+**Validates: Requirements 6.2**
+
 > Para qualquer CSV cujo cabeçalho difira de `EXPECTED_COLUMNS`, `validate()` retorna ao menos um erro.<br>
 Forma: `∀ csv: header ≠ EXPECTED_COLUMNS → count(validate(csv)) > 0`<br>
 
