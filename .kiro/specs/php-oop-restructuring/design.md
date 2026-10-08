@@ -615,27 +615,27 @@ classDiagram
 
 As propriedades abaixo devem ser verificáveis por testes automatizados:
 
-#### P1 — Singleton DatabaseConnection
+### Property 1: Singleton DatabaseConnection
 > Para quaisquer duas chamadas `DatabaseConnection::getInstance()` no mesmo processo PHP, o objeto retornado é identicamente o mesmo (`===`).<br>
 Forma: `∀ (c1, c2) ∈ getInstance × getInstance : c1() === c2()`<br>
 
-#### P2 — Autoloader PSR-4
+### Property 2: Autoloader PSR-4
 > Para qualquer classe `ScorePerformance\X\Y`, o autoloader resolve o caminho como `src/X/Y.php`.<br>
 Forma: `∀ class ∈ ScorePerformance\*: autoload(class) → src/ + class.replace('\\','/') + '.php'`<br>
 
-#### P3 — Repository retorna array
+### Property 3: Repository retorna array
 > Para qualquer método `find*()` de qualquer Repository, o retorno é sempre `array` (possivelmente vazio), nunca `null`.<br>
 Forma: `∀ repo, ∀ method ∈ find*: is_array(repo.method()) === true`<br>
 
-#### P4 — Batch Load: integridade do relatório
+### Property 4: Batch Load integridade do relatório
 > O total de linhas de um relatório de lote é sempre igual à soma de sucesso e falha.<br>
 Forma: `∀ csv: report.total === report.success + report.failure`<br>
 
-#### P5 — TemplateEngine sem vazamento de escopo
+### Property 5: TemplateEngine sem vazamento de escopo
 > Uma segunda chamada a `render()` não tem acesso a variáveis da primeira chamada.<br>
 Forma: `∀ (d1, d2) com chaves disjuntas: vars(d1) ∩ scope(render(d2)) = ∅`<br>
 
-#### P6 — CsvValidator rejeita cabeçalho inválido
+### Property 6: CsvValidator rejeita cabeçalho inválido
 > Para qualquer CSV cujo cabeçalho difira de `EXPECTED_COLUMNS`, `validate()` retorna ao menos um erro.<br>
 Forma: `∀ csv: header ≠ EXPECTED_COLUMNS → count(validate(csv)) > 0`<br>
 
@@ -647,7 +647,7 @@ Forma: `∀ csv: header ≠ EXPECTED_COLUMNS → count(validate(csv)) > 0`<br>
 
 As propriedades abaixo devem ser verificáveis por testes automatizados:
 
-#### P1 — Singleton DatabaseConnection
+### Property 1: Singleton DatabaseConnection
 > Para quaisquer duas chamadas `DatabaseConnection::getInstance()` no mesmo processo PHP, o objeto retornado é identicamente o mesmo (`===`).
 
 ```
@@ -655,7 +655,7 @@ As propriedades abaixo devem ser verificáveis por testes automatizados:
     call1() === call2()
 ```
 
-#### P2 — Autoloader PSR-4
+### Property 2: Autoloader PSR-4
 > Para qualquer classe `ScorePerformance\X\Y`, o autoloader resolve o caminho como `src/X/Y.php` e nunca como outro caminho.
 
 ```
@@ -663,7 +663,7 @@ As propriedades abaixo devem ser verificáveis por testes automatizados:
     autoload(className) resolves to src/ + className.replace('\\', '/') + '.php'
 ```
 
-#### P3 — Repository retorna array (nunca null)
+### Property 3: Repository retorna array (nunca null)
 > Para qualquer método `find*()` de qualquer Repository, o retorno é sempre um `array` (possivelmente vazio `[]`), nunca `null`.
 
 ```
@@ -686,7 +686,7 @@ As propriedades abaixo devem ser verificáveis por testes automatizados:
     variáveis de render1 NÃO estão disponíveis no escopo de render2
 ```
 
-#### P6 — CsvValidator rejeita cabeçalho inválido
+### Property 6: CsvValidator rejeita cabeçalho inválido
 > Para qualquer CSV cujo cabeçalho difira de `EXPECTED_COLUMNS`, `CsvValidator::validate()` retorna ao menos um erro.
 
 ```
